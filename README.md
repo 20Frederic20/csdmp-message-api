@@ -84,6 +84,7 @@ pnpm start
 Envoie un email de manière asynchrone.
 
 **Corps de la requête :**
+
 ```json
 {
   "to": "destinataire@example.com",
@@ -93,6 +94,7 @@ Envoie un email de manière asynchrone.
 ```
 
 **Réponse :**
+
 ```json
 {
   "message": "Notification mise en attente pour envoi",

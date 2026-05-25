@@ -1,23 +1,55 @@
-import 'dotenv/config';
-import express from 'express';
-import { EmailQueueService } from './infrastructure/queue/EmailQueueService';
-import { EmailController } from './presentation/controllers/EmailController';
-import { NodemailerGateway } from './infrastructure/gateways/NodemailerGateway';
-import { SendEmailUseCase } from './use-cases/SendEmailUseCase';
-import { setupEmailWorker } from './infrastructure/queue/EmailWorker';
+import "dotenv/config";
+import express from "express";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
+
+import { BullMQNotificationQueue } from "./infrastructure/queue/BullMQNotificationQueue";
+import { EmailGateway } from "./infrastructure/gateways/EmailGateway";
+import { NotifyUseCase } from "./use-cases/NotifyUseCase";
+import { EnqueueNotificationUseCase } from "./use-cases/EnqueueNotificationUseCase";
+import { NotificationController } from "./presentation/controllers/NotificationController";
+import { setupNotificationWorker } from "./infrastructure/queue/NotificationWorker";
 
 const app = express();
 app.use(express.json());
 
-const emailQueueService = new EmailQueueService();
-const mailGateway = new NodemailerGateway();
+// Infrastructure
+const notificationQueue = new BullMQNotificationQueue();
+const emailGateway = new EmailGateway();
 
-const sendEmailUseCase = new SendEmailUseCase(mailGateway);
+// Use Cases
+const notifyUseCase = new NotifyUseCase(emailGateway);
+const enqueueNotificationUseCase = new EnqueueNotificationUseCase(
+  notificationQueue,
+);
 
-const emailController = new EmailController(emailQueueService);
+// Presentation
+const notificationController = new NotificationController(
+  enqueueNotificationUseCase,
+);
 
-app.post('/api/notify/email', emailController.send);
+// Routes
+app.post("/api/notify/email", notificationController.send);
 
-setupEmailWorker(sendEmailUseCase);
+// Bull Board
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath("/admin/queues");
 
-app.listen(3000, () => console.log('Serveur démarré sur http://localhost:3000'));
+createBullBoard({
+  queues: [new BullMQAdapter(notificationQueue.getQueue())],
+  serverAdapter: serverAdapter,
+});
+
+app.use("/admin/queues", serverAdapter.getRouter());
+
+// Worker
+setupNotificationWorker(notifyUseCase);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
+  console.log(
+    `Queue monitoring available at http://localhost:${PORT}/admin/queues`,
+  );
+});
