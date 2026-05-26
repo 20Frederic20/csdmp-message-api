@@ -1,22 +1,28 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3001:3001"
     env_file:
       - .env
     environment:
+      - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URI=mongodb://mongodb:27017/message-api
     depends_on:
       - redis
       - mongodb
+    volumes:
+      - .:/app
+      - /app/node_modules
 
   redis:
     image: redis:alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   mongodb:
     image: mongo:latest
