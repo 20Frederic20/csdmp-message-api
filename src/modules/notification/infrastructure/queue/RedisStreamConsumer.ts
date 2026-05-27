@@ -83,13 +83,15 @@ export class RedisStreamConsumer {
           to: payload.email || payload.to,
           subject: "Bienvenue !",
           body: `Bonjour ${payload.firstName || "Patient"}, votre compte a été créé avec succès.`,
+          channel: "email",
         };
-      } else if (data.to && data.subject && data.body) {
+      } else if (data.to && data.body) {
         // Direct notification format
         notification = {
           to: data.to,
           subject: data.subject,
           body: data.body,
+          channel: (data.channel as any) || "email",
         };
       }
 
