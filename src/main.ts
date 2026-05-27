@@ -4,18 +4,19 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 
-import { BullMQNotificationQueue } from "./infrastructure/queue/BullMQNotificationQueue";
-import { EmailGateway } from "./infrastructure/gateways/EmailGateway";
-import { MongooseNotificationRepository } from "./infrastructure/gateways/MongooseNotificationRepository";
-import { NotifyUseCase } from "./use-cases/NotifyUseCase";
-import { EnqueueNotificationUseCase } from "./use-cases/EnqueueNotificationUseCase";
-import { GetNotificationsUseCase } from "./use-cases/GetNotificationsUseCase";
-import { GetNotificationByIdUseCase } from "./use-cases/GetNotificationByIdUseCase";
-import { UpdateNotificationUseCase } from "./use-cases/UpdateNotificationUseCase";
-import { DeleteNotificationUseCase } from "./use-cases/DeleteNotificationUseCase";
-import { NotificationController } from "./presentation/controllers/NotificationController";
-import { setupNotificationWorker } from "./infrastructure/queue/NotificationWorker";
-import { connectDB } from "./infrastructure/db/mongoose";
+import { BullMQNotificationQueue } from "./modules/notification/infrastructure/queue/BullMQNotificationQueue";
+import { NotificationGatewayFactory } from "./modules/notification/infrastructure/gateways/NotificationGatewayFactory";
+import { MongooseNotificationRepository } from "./modules/notification/infrastructure/gateways/MongooseNotificationRepository";
+import { NotifyUseCase } from "./modules/notification/use-cases/NotifyUseCase";
+import { EnqueueNotificationUseCase } from "./modules/notification/use-cases/EnqueueNotificationUseCase";
+import { GetNotificationsUseCase } from "./modules/notification/use-cases/GetNotificationsUseCase";
+import { GetNotificationByIdUseCase } from "./modules/notification/use-cases/GetNotificationByIdUseCase";
+import { UpdateNotificationUseCase } from "./modules/notification/use-cases/UpdateNotificationUseCase";
+import { DeleteNotificationUseCase } from "./modules/notification/use-cases/DeleteNotificationUseCase";
+import { NotificationController } from "./modules/notification/presentation/controllers/NotificationController";
+import { setupNotificationWorker } from "./modules/notification/infrastructure/queue/NotificationWorker";
+import { RedisStreamConsumer } from "./modules/notification/infrastructure/queue/RedisStreamConsumer";
+import { connectDB } from "./shared/infrastructure/db/mongoose";
 
 const app = express();
 app.use(express.json());
@@ -25,11 +26,14 @@ connectDB();
 
 // Infrastructure
 const notificationQueue = new BullMQNotificationQueue();
-const emailGateway = new EmailGateway();
+const notificationGatewayFactory = new NotificationGatewayFactory();
 const notificationRepository = new MongooseNotificationRepository();
 
 // Use Cases
-const notifyUseCase = new NotifyUseCase(emailGateway, notificationRepository);
+const notifyUseCase = new NotifyUseCase(
+  notificationRepository,
+  notificationGatewayFactory,
+);
 const enqueueNotificationUseCase = new EnqueueNotificationUseCase(
   notificationQueue,
   notificationRepository,
@@ -76,6 +80,10 @@ app.use("/admin/queues", serverAdapter.getRouter());
 
 // Worker
 setupNotificationWorker(notifyUseCase);
+
+// Redis Stream Consumer
+const redisStreamConsumer = new RedisStreamConsumer(enqueueNotificationUseCase);
+redisStreamConsumer.start();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

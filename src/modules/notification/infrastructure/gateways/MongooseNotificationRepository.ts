@@ -47,6 +47,7 @@ export class MongooseNotificationRepository implements INotificationRepository {
       to: doc.to,
       subject: doc.subject,
       body: doc.body,
+      channel: doc.channel,
       status: doc.status,
       error: doc.error,
       createdAt: doc.createdAt,

@@ -9,8 +9,12 @@ export class EnqueueNotificationUseCase {
   ) {}
 
   async execute(notification: Notification): Promise<void> {
-    if (!notification.to || !notification.subject || !notification.body) {
+    if (!notification.to || !notification.body || !notification.channel) {
       throw new Error("Missing notification details");
+    }
+
+    if (notification.channel === "email" && !notification.subject) {
+      throw new Error("Email notification requires a subject");
     }
 
     const savedNotification = await this.notificationRepository.save({
