@@ -15,6 +15,7 @@ import { UpdateNotificationUseCase } from "./use-cases/UpdateNotificationUseCase
 import { DeleteNotificationUseCase } from "./use-cases/DeleteNotificationUseCase";
 import { NotificationController } from "./presentation/controllers/NotificationController";
 import { setupNotificationWorker } from "./infrastructure/queue/NotificationWorker";
+import { RedisStreamConsumer } from "./infrastructure/queue/RedisStreamConsumer";
 import { connectDB } from "./infrastructure/db/mongoose";
 
 const app = express();
@@ -76,6 +77,10 @@ app.use("/admin/queues", serverAdapter.getRouter());
 
 // Worker
 setupNotificationWorker(notifyUseCase);
+
+// Redis Stream Consumer
+const redisStreamConsumer = new RedisStreamConsumer(enqueueNotificationUseCase);
+redisStreamConsumer.start();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
