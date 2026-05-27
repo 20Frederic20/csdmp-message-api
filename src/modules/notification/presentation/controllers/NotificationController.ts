@@ -16,9 +16,14 @@ export class NotificationController {
 
   send = async (req: Request, res: Response) => {
     try {
-      const { to, subject, body } = req.body;
+      const { to, subject, body, channel } = req.body;
 
-      await this.enqueueNotificationUseCase.execute({ to, subject, body });
+      await this.enqueueNotificationUseCase.execute({
+        to,
+        subject,
+        body,
+        channel: channel || "email",
+      });
 
       return res.status(202).json({
         message: "Notification successfully queued",
