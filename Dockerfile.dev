@@ -1,19 +1,23 @@
 FROM node:20-slim
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV PNPM_STORE_DIR=/pnpm/store
 
-RUN npm install -g pnpm@10.28.2
+RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,target=/pnpm/store \
     pnpm install
 
 COPY . .
 
-EXPOSE 3001
 
-CMD ["pnpm", "dev"]
+EXPOSE 3000
+
+CMD ["pnpm", "run", "dev"]
