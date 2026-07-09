@@ -32,7 +32,6 @@ services:
 volumes:
   mongodb_data:
 
-
 networks:
   csdmpcleanarch_app_network:
     external: true
